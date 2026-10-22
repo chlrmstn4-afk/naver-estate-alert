@@ -7,12 +7,13 @@ import os
 import re
 import time
 import json
-import requests
+from curl_cffi import requests
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
 BASE = "https://new.land.naver.com"
 
 TOKEN_PATTERNS = [
+    re.compile(r'"token"\s*:\s*\{\s*"token"\s*:\s*"([^"]+)"'),
     re.compile(r"Bearer\s+([A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+)"),
     re.compile(r'"authorization"\s*:\s*"Bearer\s+([^"]+)"'),
     re.compile(r"NLR_ATK['\"]?\s*[:=]\s*['\"]([^'\"]+)['\"]"),
@@ -24,7 +25,7 @@ class NaverLandError(RuntimeError):
 
 
 def get_session() -> requests.Session:
-    s = requests.Session()
+    s = requests.Session(impersonate="chrome124")
     s.headers.update({
         "User-Agent": UA,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
