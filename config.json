@@ -1,0 +1,11 @@
+{
+  "complexes": [
+    {
+      "complex_no": "26925",
+      "name": "버들치마을 성복자이1차",
+      "role": "home"
+    }
+  ],
+  "trade_types": ["A1", "B1"],
+  "watched_areas": {}
+}

@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>부동산 알리미</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --surface-2: #f3f3f1;
+    --border: #e3e2de;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #85837c;
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --series-4: #eda100;
+    --series-5: #e87ba4;
+    --status-good: #0ca30c;
+    --status-warning: #fab219;
+    --status-critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --surface-1: #1a1a19;
+      --surface-2: #232322;
+      --border: #383835;
+      --text-primary: #f0efec;
+      --text-secondary: #c3c2b7;
+      --text-muted: #8f8d85;
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --series-3: #199e70;
+      --series-4: #c98500;
+      --series-5: #d55181;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --surface-2: #232322;
+    --border: #383835;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #8f8d85;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--surface-1);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 20px; margin: 4px 0 2px; }
+  .sub { color: var(--text-secondary); font-size: 13px; margin-bottom: 20px; }
+  section {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  section h2 { font-size: 15px; margin: 0 0 12px; }
+  label { font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px; }
+  input, select {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface-1);
+    color: var(--text-primary);
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  button {
+    padding: 9px 14px;
+    border-radius: 8px;
+    border: none;
+    background: var(--series-1);
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  button.secondary { background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .row > * { flex: 1; min-width: 140px; }
+  .complex-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .complex-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 13px;
+  }
+  .complex-item .name { flex: 1; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--surface-1); color: var(--text-secondary); border: 1px solid var(--border); }
+  .badge.home { color: var(--series-1); border-color: var(--series-1); }
+  .pick-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .pick-list label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-primary); width: auto; margin: 0; }
+  canvas { max-width: 100%; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--border); }
+  th { color: var(--text-secondary); font-weight: 500; }
+  .tag { font-size: 11px; padding: 2px 7px; border-radius: 999px; color: #fff; }
+  .tag.new { background: var(--status-good); }
+  .tag.changed { background: var(--status-warning); color: #241c00; }
+  .tag.closed { background: var(--status-critical); }
+  .empty { color: var(--text-muted); font-size: 13px; padding: 10px 0; }
+  .hint { font-size: 12px; color: var(--text-muted); margin-top: -4px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div class="viz-root wrap">
+  <h1>부동산 알리미</h1>
+  <div class="sub">네이버부동산 매물 증감 · 가격 추이 대시보드</div>
+
+  <section id="settings-section">
+    <h2>단지 설정</h2>
+    <div class="hint">GitHub 저장소 설정을 바꾸려면 쓰기 권한이 있는 Personal Access Token이 필요해요 (최초 1회만 입력, 브라우저에만 저장됨).</div>
+    <div class="row">
+      <div>
+        <label>GitHub repo (owner/repo)</label>
+        <input id="gh-repo" placeholder="chlrmstn4-afk/naver-estate-alert" />
+      </div>
+      <div>
+        <label>GitHub Personal Access Token</label>
+        <input id="gh-pat" type="password" placeholder="ghp_..." />
+      </div>
+    </div>
+
+    <div class="complex-list" id="complex-list"></div>
+
+    <div class="row">
+      <div>
+        <label>네이버부동산 URL 또는 단지번호</label>
+        <input id="new-url" placeholder="new.land.naver.com/complexes/26925 또는 26925" />
+      </div>
+      <div>
+        <label>표시 이름</label>
+        <input id="new-name" placeholder="예: 버들치마을 성복자이1차" />
+      </div>
+      <div>
+        <label>역할</label>
+        <select id="new-role">
+          <option value="watch">비교 단지</option>
+          <option value="home">우리집</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>알림 받을 평형 (전용, 예: 25 또는 25-34, 비우면 전체)</label>
+        <input id="new-areas" placeholder="25 또는 25-34" />
+      </div>
+    </div>
+    <div class="row">
+      <button id="add-complex">단지 추가</button>
+      <button id="save-config" class="secondary">GitHub에 설정 저장</button>
+    </div>
+    <div class="hint" id="save-status"></div>
+  </section>
+
+  <section>
+    <h2>단지 선택 (대시보드)</h2>
+    <div class="pick-list" id="pick-list"></div>
+    <div class="row">
+      <div>
+        <label>가격 추이에 표시할 평형 (비우면 전체 평균)</label>
+        <input id="filter-area" placeholder="25" />
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>매물 수 추이</h2>
+    <canvas id="chart-count" height="220"></canvas>
+  </section>
+
+  <section>
+    <h2>가격 추이 (만원)</h2>
+    <canvas id="chart-price" height="220"></canvas>
+  </section>
+
+  <section>
+    <h2>최근 변동 내역</h2>
+    <table id="events-table">
+      <thead><tr><th>날짜</th><th>단지</th><th>구분</th><th>내용</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="empty" id="events-empty" style="display:none;">선택한 단지의 변동 내역이 아직 없어요.</div>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script>
+const SERIES = ["--series-1","--series-2","--series-3","--series-4","--series-5"];
+function seriesColor(i) {
+  return getComputedStyle(document.querySelector(".viz-root")).getPropertyValue(SERIES[i % SERIES.length]).trim();
+}
+function textColor(role) {
+  return getComputedStyle(document.querySelector(".viz-root")).getPropertyValue(role).trim();
+}
+
+let config = { complexes: [], trade_types: ["A1","B1"], watched_areas: {} };
+let configSha = null;
+let manifest = [];
+let selected = new Set();
+
+const $ = (id) => document.getElementById(id);
+
+function loadLocal() {
+  $("gh-repo").value = localStorage.getItem("gh_repo") || "";
+  $("gh-pat").value = localStorage.getItem("gh_pat") || "";
+}
+$("gh-repo").addEventListener("change", () => localStorage.setItem("gh_repo", $("gh-repo").value.trim()));
+$("gh-pat").addEventListener("change", () => localStorage.setItem("gh_pat", $("gh-pat").value.trim()));
+
+async function ghGetConfig() {
+  const repo = localStorage.getItem("gh_repo");
+  const pat = localStorage.getItem("gh_pat");
+  if (!repo || !pat) return;
+  const res = await fetch(`https://api.github.com/repos/${repo}/contents/config.json`, {
+    headers: { Authorization: `Bearer ${pat}`, Accept: "application/vnd.github+json" },
+  });
+  if (!res.ok) { $("save-status").textContent = `설정 불러오기 실패 (${res.status})`; return; }
+  const data = await res.json();
+  configSha = data.sha;
+  config = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+  renderComplexList();
+}
+
+async function ghSaveConfig() {
+  const repo = localStorage.getItem("gh_repo");
+  const pat = localStorage.getItem("gh_pat");
+  if (!repo || !pat) { $("save-status").textContent = "repo와 토큰을 먼저 입력해주세요."; return; }
+  const body = {
+    message: `config: ${new Date().toISOString().slice(0,10)} 단지 설정 업데이트`,
+    content: btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2)))),
+    branch: "main",
+  };
+  if (configSha) body.sha = configSha;
+  const res = await fetch(`https://api.github.com/repos/${repo}/contents/config.json`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${pat}`, Accept: "application/vnd.github+json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) { $("save-status").textContent = `저장 실패 (${res.status}) - 토큰 권한을 확인해주세요.`; return; }
+  const data = await res.json();
+  configSha = data.content.sha;
+  $("save-status").textContent = "저장됐어요. 다음 자동 수집(매일 09시)부터 반영돼요.";
+}
+
+function extractComplexNo(text) {
+  const m = text.match(/complexes\/(\d+)/) || text.match(/^(\d+)$/);
+  return m ? m[1] : null;
+}
+
+function parseAreaRanges(text) {
+  if (!text.trim()) return null;
+  return text.split(",").map(s => s.trim()).filter(Boolean).map(part => {
+    const [a, b] = part.split("-").map(x => parseFloat(x));
+    const lo = a - 1, hi = (isNaN(b) ? a : b) + 1;
+    return [Math.round(lo * 3.3058 * 10) / 10, Math.round(hi * 3.3058 * 10) / 10];
+  });
+}
+
+function renderComplexList() {
+  const el = $("complex-list");
+  el.innerHTML = "";
+  if (!config.complexes.length) {
+    el.innerHTML = '<div class="empty">아직 등록된 단지가 없어요. 아래에서 추가해주세요.</div>';
+    return;
+  }
+  config.complexes.forEach(c => {
+    const div = document.createElement("div");
+    div.className = "complex-item";
+    const areas = (config.watched_areas || {})[c.complex_no];
+    div.innerHTML = `
+      <span class="badge ${c.role === 'home' ? 'home' : ''}">${c.role === 'home' ? '우리집' : '비교'}</span>
+      <span class="name">${c.name} (${c.complex_no})</span>
+      <span class="badge">${areas ? '알림 설정됨' : '전체 알림'}</span>
+      <button class="secondary" data-remove="${c.complex_no}">삭제</button>
+    `;
+    el.appendChild(div);
+  });
+  el.querySelectorAll("[data-remove]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const no = btn.dataset.remove;
+      config.complexes = config.complexes.filter(c => c.complex_no !== no);
+      delete (config.watched_areas || {})[no];
+      renderComplexList();
+    });
+  });
+}
+
+$("add-complex").addEventListener("click", () => {
+  const no = extractComplexNo($("new-url").value.trim());
+  if (!no) { $("save-status").textContent = "단지번호를 인식하지 못했어요. URL 또는 숫자를 확인해주세요."; return; }
+  const name = $("new-name").value.trim() || no;
+  const role = $("new-role").value;
+  if (config.complexes.some(c => c.complex_no === no)) { $("save-status").textContent = "이미 등록된 단지예요."; return; }
+  config.complexes.push({ complex_no: no, name, role });
+  const ranges = parseAreaRanges($("new-areas").value);
+  if (ranges) {
+    config.watched_areas = config.watched_areas || {};
+    config.watched_areas[no] = ranges;
+  }
+  $("new-url").value = ""; $("new-name").value = ""; $("new-areas").value = "";
+  $("save-status").textContent = "";
+  renderComplexList();
+});
+
+$("save-config").addEventListener("click", ghSaveConfig);
+
+async function loadManifest() {
+  try {
+    const res = await fetch("data/manifest.json", { cache: "no-store" });
+    manifest = res.ok ? await res.json() : [];
+  } catch (e) { manifest = []; }
+  renderPickList();
+}
+
+function renderPickList() {
+  const el = $("pick-list");
+  el.innerHTML = "";
+  const list = manifest.length ? manifest : config.complexes;
+  if (!list.length) { el.innerHTML = '<div class="empty">아직 수집된 데이터가 없어요. 설정에서 단지를 추가하고 저장하면, 다음날 자동 수집 후 여기 표시돼요.</div>'; return; }
+  list.forEach((c, i) => {
+    if (i < 3) selected.add(c.complex_no);
+    const label = document.createElement("label");
+    label.innerHTML = `<input type="checkbox" value="${c.complex_no}" ${selected.has(c.complex_no) ? "checked" : ""}/> ${c.name}`;
+    label.querySelector("input").addEventListener("change", (e) => {
+      if (e.target.checked) selected.add(c.complex_no); else selected.delete(c.complex_no);
+      renderCharts();
+    });
+    el.appendChild(label);
+  });
+}
+
+$("filter-area").addEventListener("change", renderCharts);
+
+async function fetchJson(path) {
+  try {
+    const res = await fetch(path, { cache: "no-store" });
+    return res.ok ? await res.json() : null;
+  } catch (e) { return null; }
+}
+
+let countChart, priceChart;
+
+function buildLineChart(canvasId, datasets, yLabel) {
+  const ctx = $(canvasId).getContext("2d");
+  return new Chart(ctx, {
+    type: "line",
+    data: { datasets },
+    options: {
+      responsive: true,
+      interaction: { mode: "index", intersect: false },
+      scales: {
+        x: { type: "time", time: { unit: "day" }, grid: { color: "transparent" }, ticks: { color: textColor("--text-secondary") } },
+        y: { title: { display: true, text: yLabel, color: textColor("--text-secondary") }, grid: { color: textColor("--border") }, ticks: { color: textColor("--text-secondary") } },
+      },
+      plugins: { legend: { labels: { color: textColor("--text-primary") } } },
+    },
+  });
+}
+
+async function renderCharts() {
+  const names = {};
+  (manifest.length ? manifest : config.complexes).forEach(c => names[c.complex_no] = c.name);
+
+  const countDatasets = [];
+  const priceDatasets = [];
+  const allEvents = [];
+  const areaFilter = $("filter-area").value.trim();
+
+  let i = 0;
+  for (const no of selected) {
+    const history = await fetchJson(`data/${no}/history.json`);
+    const events = await fetchJson(`data/${no}/events.json`);
+    const color = seriesColor(i++);
+    if (history) {
+      countDatasets.push({
+        label: names[no] || no,
+        data: history.map(h => ({ x: h.date, y: h.total_count })),
+        borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 3, tension: 0.15,
+      });
+      priceDatasets.push({
+        label: names[no] || no,
+        data: history.map(h => {
+          let val;
+          if (areaFilter && h.by_area[areaFilter]) val = h.by_area[areaFilter].avg_price_man;
+          else if (!areaFilter) {
+            const buckets = Object.values(h.by_area || {});
+            const totalCount = buckets.reduce((s, b) => s + b.count, 0);
+            val = totalCount ? Math.round(buckets.reduce((s, b) => s + b.avg_price_man * b.count, 0) / totalCount) : null;
+          }
+          return val != null ? { x: h.date, y: val } : null;
+        }).filter(Boolean),
+        borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 3, tension: 0.15,
+      });
+    }
+    if (events) events.forEach(e => allEvents.push({ ...e, complex_name: names[no] || no }));
+  }
+
+  if (countChart) countChart.destroy();
+  if (priceChart) priceChart.destroy();
+  countChart = buildLineChart("chart-count", countDatasets, "매물 수");
+  priceChart = buildLineChart("chart-price", priceDatasets, "가격 (만원)");
+
+  renderEvents(allEvents);
+}
+
+function renderEvents(events) {
+  events.sort((a, b) => b.date.localeCompare(a.date));
+  const tbody = document.querySelector("#events-table tbody");
+  tbody.innerHTML = "";
+  $("events-empty").style.display = events.length ? "none" : "block";
+  events.slice(0, 60).forEach(e => {
+    const tr = document.createElement("tr");
+    const typeLabel = { new: "신규", changed: "가격변동", closed: "소멸" }[e.type] || e.type;
+    let detail = "";
+    if (e.type === "changed") detail = `${e.old_price_man?.toLocaleString()}만 → ${e.new_price_man?.toLocaleString()}만`;
+    else detail = `${(e.price_man || 0).toLocaleString()}만 (${(e.area_exclusive_m2 ? (e.area_exclusive_m2/3.3058).toFixed(1) : "?")}평)`;
+    tr.innerHTML = `<td>${e.date}</td><td>${e.complex_name}</td><td><span class="tag ${e.type}">${typeLabel}</span></td><td>${detail}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+(async function init() {
+  loadLocal();
+  await ghGetConfig();
+  renderComplexList();
+  await loadManifest();
+  await renderCharts();
+})();
+</script>
+</body>
+</html>
